@@ -91,6 +91,7 @@ def play_blackjack(player, deck, dealer=Dealer()):
     dealer.dealer_hand.append(dealer_card2)
     print(f"The dealer is showing {dealer_card1}.\n")
 
+    # Print total
     print(f"You have {player.player_hand.total_hand()}.")
         
 
