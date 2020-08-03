@@ -1,4 +1,5 @@
 import random
+import pyinputplus as pyip
 from os import system
 
 class Deck:
@@ -75,6 +76,7 @@ class Player:
     def __repr__(self):
         return self.name, self.bankroll
 
+# Helper functions
 
 def play_again(player, deck, dealer=Dealer()):
     choice = input("Would you like to play another hand? Y/N\n")[0].lower()
@@ -84,6 +86,44 @@ def play_again(player, deck, dealer=Dealer()):
     else:
         quit()
 
+def cleanup(player, deck, dealer=Dealer()):
+    player.is_busted = False
+    dealer.is_busted = False
+    print("Clearing the layout...\n")
+    deck.discard_deck.extend(player.player_hand)
+    deck.discard_deck.extend(dealer.dealer_hand)
+    player.player_hand.clear()
+    dealer.dealer_hand.clear()
+    play_again(player, deck)
+
+# def hit_dealer_hand(player, deck, dealer=Dealer()):
+#     if player.is_busted == False and dealer.is_busted == False:
+#         dlr_hit_card = deck.card_deck.pop()
+#     print(f"{dealer.name.title()} opens a {dealer_card2}, for a total of {dealer.dealer_hand.total_hand()}.\n")
+
+#     while dealer.dealer_hand.total_hand() < 17:
+#         dealer.dealer_hand.append(dlr_hit_card)
+#         print(f"{dealer.name.title()} draws a {dlr_hit_card} and now has {dealer.dealer_hand.total_hand()}.\n")
+#         if dealer.dealer_hand.total_hand() > 21:
+#             dealer.is_busted = True
+#             print(f"{dealer.name.title()} busts with {dealer.dealer_hand.total_hand()}! You win {wager}!\n")
+#             break
+
+# def resolve_bankroll(player, dealer=Dealer()):
+#     if dealer.is_busted == True:
+#         player.bankroll = player.bankroll + wager
+#     elif player.player_hand.total_hand() > dealer.dealer_hand.total_hand():
+#         print(f"{dealer.name.title()} stands with {dealer.dealer_hand.total_hand()}.\n")
+#         print(f"You beat {dealer.name} and win ${wager}.\n")
+#         player.bankroll = player.bankroll + wager
+#     elif dealer.dealer_hand.total_hand() > player.player_hand.total_hand():
+#         print(f"{dealer.name.title()} stands with {dealer.dealer_hand.total_hand()}.\n")
+#         print(f"{dealer.name.title()} beats you. You lose your wager of ${wager}.\n")
+#         player.bankroll = player.bankroll - wager
+#     else:
+#         print("It's a push.\n")
+
+# Main game function
 
 def play_blackjack(player, deck, dealer=Dealer()):
     if len(deck.discard_deck) >= (len(deck.card_deck) * .60) or not deck.discard_deck:
@@ -113,13 +153,29 @@ def play_blackjack(player, deck, dealer=Dealer()):
     dealer.dealer_hand.append(dealer_card2)
     print(f"The dealer is showing {dealer_card1}.\n")
 
-    # Print total
+    # Print 
     print(f"You have {player.player_hand.total_hand()}.")
 
     # Control flow to resolve player hand.
 
     # First if/elif block is for pat blackjacks and dealer Ace up (insurance). 
-    if dealer.dealer_hand.total_hand() == 21 and player.player_hand.total_hand() < 21:
+    if dealer_card1 == 'A':
+        insurance = input("Would you like to take insurance Y/N? \n")[0].lower()
+        if insurance == 'y':
+            insurance_amount = float(input(f"How much would you like to wager? You can take up to {wager / 2: .2f} \n"))
+            if deck.card_values.get(dealer_card2) == 10:
+                print(f"{dealer.name.title()} has blackjack. You lose the hand but win your insurance bet.\n")
+                player.bankroll = player.bankroll - wager
+                player.bankroll = player.bankroll + (insurance_amount * 2)
+                #cleanup(player, deck)
+                play_again(player, deck) #need to add clean up steps here
+            else:
+                print(f"{dealer.name.title()} does not have blackjack. You are still in action, but lose your insurance bet.\n")
+                player.bankroll = player.bankroll - insurance_amount # need to get this to go-to next block
+        else:
+            pass
+
+    elif dealer.dealer_hand.total_hand() == 21 and player.player_hand.total_hand() < 21:
         print(f"{dealer.name.title()} has blackjack. You lose the hand.\n")
         player.bankroll = player.bankroll - wager
 
@@ -153,6 +209,7 @@ def play_blackjack(player, deck, dealer=Dealer()):
                 player.player_hand.append(pl_hit_card)
                 print(f"\nYour double down card is a {pl_hit_card}. You now have {player.player_hand.total_hand()}.\n")
                 break
+
             elif choice == "s":
                 print(f"\nPlayer stands with {player.player_hand.total_hand()}.")
                 break
@@ -163,25 +220,25 @@ def play_blackjack(player, deck, dealer=Dealer()):
         # Control flow to resolve dealer hand. 
         if player.is_busted == False and dealer.is_busted == False:
             dlr_hit_card = deck.card_deck.pop()
-            print(f"Dealer opens a {dealer_card2}, for {dealer.dealer_hand.total_hand()}\n")
+            print(f"{dealer.name.title()} opens a {dealer_card2}, for a total of {dealer.dealer_hand.total_hand()}.\n")
             while dealer.dealer_hand.total_hand() < 17:
                 dealer.dealer_hand.append(dlr_hit_card)
-                print(f"{dealer.name.title()} draws a {dlr_hit_card}\n")
+                print(f"{dealer.name.title()} draws a {dlr_hit_card} and now has {dealer.dealer_hand.total_hand()}.\n")
                 if dealer.dealer_hand.total_hand() > 21:
                     dealer.is_busted = True
                     print(f"{dealer.name.title()} busts with {dealer.dealer_hand.total_hand()}! You win {wager}!\n")
                     break
                 
-            print(f"{dealer.name.title()} stands with {dealer.dealer_hand.total_hand()}.\n")
-                  
-
+            
             # Resolves win/loss and credits/debits player bankroll    
             if dealer.is_busted == True:
                 player.bankroll = player.bankroll + wager
             elif player.player_hand.total_hand() > dealer.dealer_hand.total_hand():
+                print(f"{dealer.name.title()} stands with {dealer.dealer_hand.total_hand()}.\n")
                 print(f"You beat {dealer.name} and win ${wager}.\n")
                 player.bankroll = player.bankroll + wager
             elif dealer.dealer_hand.total_hand() > player.player_hand.total_hand():
+                print(f"{dealer.name.title()} stands with {dealer.dealer_hand.total_hand()}.\n")
                 print(f"{dealer.name.title()} beats you. You lose your wager of ${wager}.\n")
                 player.bankroll = player.bankroll - wager
             else:
@@ -195,7 +252,9 @@ def play_blackjack(player, deck, dealer=Dealer()):
     deck.discard_deck.extend(dealer.dealer_hand)
     player.player_hand.clear()
     dealer.dealer_hand.clear()
+    #cleanup(player, deck)
     play_again(player, deck)
+    
 
 
 deck = Deck()
