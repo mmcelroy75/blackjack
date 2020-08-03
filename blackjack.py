@@ -9,7 +9,7 @@ class Deck:
         self.cards = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'K', 'Q', 'A']
         self.card_deck = (self.cards * 4) * self.number
 
-        self.card_values = {'2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 10, 'Q': 10, 'K': 10, 'A': 1}
+        self.card_values = {'A': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 10, 'Q': 10, 'K': 10}
 
         self.count_values = {'2': 1, '3': 1, '4': 1, '5': 1, '6': 1, '7': 0, '8': 0, '9': 0, '10': -1, 'J': -1, 'Q': -1, 'K': -1, 'A': -1}
 
@@ -23,7 +23,7 @@ class Deck:
     def shuffle(self):
         self.card_deck = self.discard_deck + self.card_deck
         self.running_count = 0
-        random.shuffle(self.card_deck)    
+        random.shuffle(self.card_deck) 
         print("\nDeck is being shuffled...\n")
         # Represents deck being cut.
         mid_idx = len(self.card_deck) // 2
@@ -60,6 +60,7 @@ class Dealer:
         self.name = name
         self.dealer_hand = Hand()
         self.is_busted = False
+        self.ask_insurance = False
 
     def __repr__(self):
         return self.name
@@ -79,8 +80,9 @@ class Player:
 # Helper functions
 
 def play_again(player, deck, dealer=Dealer()):
-    choice = input("Would you like to play another hand? Y/N\n")[0].lower()
-    if choice == "y":
+    choice = pyip.inputYesNo(prompt="Would you like to play another hand? Y/N\n")
+    #choice = input("Would you like to play another hand? Y/N\n")[0].lower()
+    if choice == "yes":
         system('clear')
         play_blackjack(player, deck)
     else:
@@ -126,19 +128,21 @@ def cleanup(player, deck, dealer=Dealer()):
 # Main game function
 
 def play_blackjack(player, deck, dealer=Dealer()):
-    if len(deck.discard_deck) >= (len(deck.card_deck) * .60) or not deck.discard_deck:
+    if len(deck.discard_deck) >= (len(deck.card_deck) * .6) or not deck.discard_deck:
         deck.shuffle()
     
-    while True:
+    wager = pyip.inputNum(prompt=f"You have ${player.bankroll:,}. How much would you like to bet? ", max=player.bankroll)
+
+    '''while True:
         try:
             wager = float(input(f"You have ${player.bankroll:,}. How much would you like to bet? "))
             break
         except:
-            print("Whole numbers only please. ")
+            print("Whole numbers only please. ")''' # Old Code
  
     # Draws and removes top cards from deck, 2 for player and 2 for dealer
-    player_card1, player_card2 = deck.card_deck.pop(), deck.card_deck.pop()
-    dealer_card1, dealer_card2 = deck.card_deck.pop(), deck.card_deck.pop()
+    player_card1, dealer_card1 = deck.card_deck.pop(), deck.card_deck.pop()
+    player_card2, dealer_card2 = deck.card_deck.pop(), deck.card_deck.pop()
 
     # Appends cards to player's/dealer's hand.
     print("\nBets are placed. Cards are out...\n")
@@ -156,24 +160,28 @@ def play_blackjack(player, deck, dealer=Dealer()):
     # Print 
     print(f"You have {player.player_hand.total_hand()}.")
 
-    # Control flow to resolve player hand.
-
-    # First if/elif block is for pat blackjacks and dealer Ace up (insurance). 
+    # Control flow for dealer Ace Up (insurance and pat blackjacks)
     if dealer_card1 == 'A':
-        insurance = input("Would you like to take insurance Y/N? \n")[0].lower()
-        if insurance == 'y':
-            insurance_amount = float(input(f"How much would you like to wager? You can take up to {wager / 2: .2f} \n"))
-            if deck.card_values.get(dealer_card2) == 10:
-                print(f"{dealer.name.title()} has blackjack. You lose the hand but win your insurance bet.\n")
-                player.bankroll = player.bankroll - wager
-                player.bankroll = player.bankroll + (insurance_amount * 2)
-                #cleanup(player, deck)
-                play_again(player, deck) #need to add clean up steps here
+        dealer.ask_insurance = True
+        while dealer.ask_insurance:
+            insurance = pyip.inputYesNo(prompt="Would you like to take insurance? Y/N \n")
+            #insurance = input("Would you like to take insurance Y/N? \n")[0].lower()
+            if insurance == 'yes':
+                insurance_amount = pyip.inputNum(prompt=f"How much would you like to wager? You can take up to ${wager / 2: .2f} \n", max=(wager/2))
+                #insurance_amount = float(input(f"How much would you like to wager? You can take up to {wager / 2: .2f} \n"))
+                if deck.card_values.get(dealer_card2) == 10:
+                    print(f"{dealer.name.title()} has blackjack. You lose the hand but win your insurance bet.\n")
+                    player.bankroll = player.bankroll - wager
+                    player.bankroll = player.bankroll + (insurance_amount * 2)
+                    break
+                    #cleanup(player, deck)
+                    #play_again(player, deck) #need to add clean up steps here
+                else:
+                    print(f"{dealer.name.title()} does not have blackjack. You are still in action, but lose your insurance bet.\n")
+                    player.bankroll = player.bankroll - insurance_amount # need to get this to go-to next block
+                    break
             else:
-                print(f"{dealer.name.title()} does not have blackjack. You are still in action, but lose your insurance bet.\n")
-                player.bankroll = player.bankroll - insurance_amount # need to get this to go-to next block
-        else:
-            pass
+                continue #need to fix the move from this
 
     elif dealer.dealer_hand.total_hand() == 21 and player.player_hand.total_hand() < 21:
         print(f"{dealer.name.title()} has blackjack. You lose the hand.\n")
@@ -186,13 +194,15 @@ def play_blackjack(player, deck, dealer=Dealer()):
     elif dealer.dealer_hand.total_hand() == 21 and player.player_hand.total_hand() == 21:
         print(f"You and {dealer.name} push. You both have blackjack.\n")
         
-    else: #Resolves non-blackjack hands
+    else: # Control flow to resolve non-blackjack hands
         while player.player_hand.total_hand() <= 21 and player.is_busted == False:
             if len(player.player_hand) == 2:
-                choice = input("What would you like to do? Enter \'H\' for Hit, \'S\' for Stand, or \'D\' for Double Down. ")[0].lower()
+                choice = pyip.inputChoice(choices=['H', 'S', 'D'], prompt="What would you like to do? (H)it, (S)tand, or (D)ouble?").lower()
+                #choice = input("What would you like to do? Enter \'H\' for Hit, \'S\' for Stand, or \'D\' for Double Down. ")[0].lower()
 
-            else: 
-                choice = input("What would you like to do? Enter \'H\' for Hit or \'S\' for Stand. ")[0].lower()
+            else:
+                choice = pyip.inputChoice(choices=['H', 'S'], prompt="What would you like to do? (H)it or (S)tand?").lower() 
+                #choice = input("What would you like to do? Enter \'H\' for Hit or \'S\' for Stand. ")[0].lower()
 
             if choice == "h":
                 pl_hit_card = deck.card_deck.pop()
@@ -210,12 +220,12 @@ def play_blackjack(player, deck, dealer=Dealer()):
                 print(f"\nYour double down card is a {pl_hit_card}. You now have {player.player_hand.total_hand()}.\n")
                 break
 
-            elif choice == "s":
+            else:
                 print(f"\nPlayer stands with {player.player_hand.total_hand()}.")
                 break
 
-            else:
-                print("Please choose (\'H\')it, (\'S\')tand, or (\'D\')ouble Down (on the first two cards).")
+            #else:
+                #print("Please choose (\'H\')it, (\'S\')tand, or (\'D\')ouble Down (on the first two cards).")
 
         # Control flow to resolve dealer hand. 
         if player.is_busted == False and dealer.is_busted == False:
@@ -245,12 +255,13 @@ def play_blackjack(player, deck, dealer=Dealer()):
                 print("It's a push.\n")
 
     #Final cleanup steps
-    player.is_busted = False
+    player.is_busted = False # Resets is_busted status
     dealer.is_busted = False
+    dealer.ask_insurance = False # Resets dealer ace up trigger
     print("Clearing the layout...\n")
-    deck.discard_deck.extend(player.player_hand)
+    deck.discard_deck.extend(player.player_hand) # Adds player/dealer cards to discard
     deck.discard_deck.extend(dealer.dealer_hand)
-    player.player_hand.clear()
+    player.player_hand.clear() # Empties player/dealer hands
     dealer.dealer_hand.clear()
     #cleanup(player, deck)
     play_again(player, deck)
