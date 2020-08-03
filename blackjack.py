@@ -1,5 +1,6 @@
 import random
 import pyinputplus as pyip
+import pandas as pd
 from os import system
 
 class Deck:
