@@ -1,6 +1,5 @@
 import random
 import pyinputplus as pyip
-import pandas as pd
 from os import system
 
 class Deck:
@@ -74,6 +73,7 @@ class Player:
         self.bankroll = bankroll
         self.player_hand = Hand()
         self.is_busted = False
+        self.insurance = False
 
     def __repr__(self):
         return self.name, self.bankroll
@@ -132,7 +132,7 @@ def play_blackjack(player, deck, dealer=Dealer()):
     if len(deck.discard_deck) >= (len(deck.card_deck) * .6) or not deck.discard_deck:
         deck.shuffle()
     
-    wager = pyip.inputNum(prompt=f"You have ${player.bankroll:,}. How much would you like to bet? ", max=player.bankroll)
+    wager = pyip.inputNum(prompt=f"You have ${player.bankroll:,}. Table minimum is $50. How much would you like to bet? ", max=player.bankroll, min=50)
 
     '''while True:
         try:
@@ -142,8 +142,8 @@ def play_blackjack(player, deck, dealer=Dealer()):
             print("Whole numbers only please. ")''' # Old Code
  
     # Draws and removes top cards from deck, 2 for player and 2 for dealer
-    player_card1, dealer_card1 = deck.card_deck.pop(), deck.card_deck.pop()
-    player_card2, dealer_card2 = deck.card_deck.pop(), deck.card_deck.pop()
+    player_card1, dealer_card1 = deck.card_deck.pop(), 'A'#deck.card_deck.pop()
+    player_card2, dealer_card2 = deck.card_deck.pop(), '8'#deck.card_deck.pop()
 
     # Appends cards to player's/dealer's hand.
     print("\nBets are placed. Cards are out...\n")
@@ -164,33 +164,45 @@ def play_blackjack(player, deck, dealer=Dealer()):
     # Control flow for dealer Ace Up (insurance)
     if dealer_card1 == 'A':
         dealer.ask_insurance = True
+
         while dealer.ask_insurance:
             insurance = pyip.inputYesNo(prompt="Would you like to take insurance? Y/N \n")
-            #insurance = input("Would you like to take insurance Y/N? \n")[0].lower()
+
             if insurance == 'yes':
-                insurance_amount = pyip.inputNum(prompt=f"How much would you like to wager? You can take up to ${wager / 2: .2f} \n", max=(wager/2))
-                #insurance_amount = float(input(f"How much would you like to wager? You can take up to {wager / 2: .2f} \n"))
+                player.insurance = True
+                insurance_amount = pyip.inputNum(prompt=f"How much would you like to wager? You can take up to ${(wager/2): .2f} \n", max=(wager/2))
+
                 if deck.card_values.get(dealer_card2) == 10:
-                    print(f"{dealer.name.title()} has blackjack. You lose the hand but win your insurance bet.\n")
+                    #print(f"{dealer.name.title()} has blackjack. You lose the hand but win your insurance bet.\n")
                     player.bankroll = player.bankroll - wager
                     player.bankroll = player.bankroll + (insurance_amount * 2)
                     break
-                    #cleanup(player, deck)
-                    #play_again(player, deck) #need to add clean up steps here
                 else:
-                    print(f"{dealer.name.title()} does not have blackjack. You are still in action, but lose your insurance bet.\n")
+                    print(f"{dealer.name.title()} does not have blackjack. You are still in action, but lose your insurance bet. You have {player.player_hand.total_hand()}.\n")
                     player.bankroll = player.bankroll - insurance_amount # need to get this to go-to next block
                     break
-            else:
-                continue #need to fix the move from this
-    
+            else: 
+                player.insurance = False         
+                if deck.card_values.get(dealer_card2) == 10:
+                    #print(f"{dealer.name.title()} has blackjack. You lose the hand but win your insurance bet.\n")
+                    player.bankroll = player.bankroll - wager
+                    break
+                else:
+                    print(f"Nobody home. You have {player.player_hand.total_hand()}.\n")
+                    break
+
+
     # Control flow for pat blackjacks.
-    elif dealer.dealer_hand.total_hand() == 21 and player.player_hand.total_hand() < 21:
-        print(f"{dealer.name.title()} has blackjack. You lose the hand.\n")
+    if dealer.dealer_hand.total_hand() == 21 and player.player_hand.total_hand() < 21:
+        if player.insurance == True:
+            print(f"{dealer.name.title()} has blackjack. You lose the hand but win your insurance bet.\n")
+        else:
+            print(f"{dealer.name.title()} has blackjack. You lose the hand.\n")
+
         player.bankroll = player.bankroll - wager
 
     elif player.player_hand.total_hand() == 21 and dealer.dealer_hand.total_hand() < 21:
-        print("You have blackjack! You win the hand!\n")
+        print(f"You have blackjack! You win {wager * 1.5: .2f}!\n")
         player.bankroll = player.bankroll + (wager * 1.5)
 
     elif dealer.dealer_hand.total_hand() == 21 and player.player_hand.total_hand() == 21:
@@ -200,11 +212,8 @@ def play_blackjack(player, deck, dealer=Dealer()):
         while player.player_hand.total_hand() <= 21 and player.is_busted == False:
             if len(player.player_hand) == 2:
                 choice = pyip.inputChoice(choices=['H', 'S', 'D'], prompt="What would you like to do? (H)it, (S)tand, or (D)ouble?").lower()
-                #choice = input("What would you like to do? Enter \'H\' for Hit, \'S\' for Stand, or \'D\' for Double Down. ")[0].lower()
-
             else:
                 choice = pyip.inputChoice(choices=['H', 'S'], prompt="What would you like to do? (H)it or (S)tand?").lower() 
-                #choice = input("What would you like to do? Enter \'H\' for Hit or \'S\' for Stand. ")[0].lower()
 
             if choice == "h":
                 pl_hit_card = deck.card_deck.pop()
@@ -224,11 +233,8 @@ def play_blackjack(player, deck, dealer=Dealer()):
                 break
 
             else:
-                print(f"\nPlayer stands with {player.player_hand.total_hand()}.")
+                print(f"\nPlayer stands with {player.player_hand.total_hand()}.\n")
                 break
-
-            #else:
-                #print("Please choose (\'H\')it, (\'S\')tand, or (\'D\')ouble Down (on the first two cards).")
 
         # Control flow to resolve dealer hand. 
         if player.is_busted == False and dealer.is_busted == False:
