@@ -1,6 +1,5 @@
 import random
 import pyinputplus as pyip
-import pandas as pd
 from os import system
 
 class Deck:
@@ -84,7 +83,6 @@ def play_again(player, deck, dealer=Dealer()):
     choice = pyip.inputYesNo(prompt="Would you like to play another hand? Y/N\n")
     #choice = input("Would you like to play another hand? Y/N\n")[0].lower()
     if choice == "yes":
-        system('clear')
         play_blackjack(player, deck)
     else:
         quit()
@@ -129,6 +127,7 @@ def cleanup(player, deck, dealer=Dealer()):
 # Main game function
 
 def play_blackjack(player, deck, dealer=Dealer()):
+    system('clear')
     if len(deck.discard_deck) >= (len(deck.card_deck) * .6) or not deck.discard_deck:
         deck.shuffle()
     
@@ -161,7 +160,7 @@ def play_blackjack(player, deck, dealer=Dealer()):
     # Print 
     print(f"You have {player.player_hand.total_hand()}.")
 
-    # Control flow for dealer Ace Up (insurance and pat blackjacks)
+    # Control flow for dealer Ace Up (insurance)
     if dealer_card1 == 'A':
         dealer.ask_insurance = True
         while dealer.ask_insurance:
@@ -183,7 +182,8 @@ def play_blackjack(player, deck, dealer=Dealer()):
                     break
             else:
                 continue #need to fix the move from this
-
+    
+    # Control flow for pat blackjacks.
     elif dealer.dealer_hand.total_hand() == 21 and player.player_hand.total_hand() < 21:
         print(f"{dealer.name.title()} has blackjack. You lose the hand.\n")
         player.bankroll = player.bankroll - wager
@@ -216,6 +216,7 @@ def play_blackjack(player, deck, dealer=Dealer()):
                     break
 
             elif choice == "d":
+                wager += wager
                 pl_hit_card = deck.card_deck.pop()
                 player.player_hand.append(pl_hit_card)
                 print(f"\nYour double down card is a {pl_hit_card}. You now have {player.player_hand.total_hand()}.\n")
