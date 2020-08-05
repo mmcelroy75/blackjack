@@ -4,9 +4,9 @@ from os import system
 
 class Deck:
 
-    def __init__(self, number=2):
+    def __init__(self, number=2): # defaults to a double-deck game
         self.number = number
-        self.cards = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'K', 'Q', 'A']
+        self.cards = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
         self.card_deck = (self.cards * 4) * self.number
 
         self.card_values = {'A': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 10, 'Q': 10, 'K': 10}
@@ -22,15 +22,17 @@ class Deck:
     
     def shuffle(self):
         self.card_deck = self.discard_deck + self.card_deck
+        self.discard_deck.clear()
         self.running_count = 0
-        random.shuffle(self.card_deck) 
+        random.shuffle(self.card_deck)
         print("\nDeck is being shuffled...\n")
         # Represents deck being cut.
         mid_idx = len(self.card_deck) // 2
         self.card_deck[:mid_idx], self.card_deck[mid_idx + 1:] = self.card_deck[mid_idx + 1:], self.card_deck[:mid_idx]
         print("Deck has been cut.\n")
         # Represents burning top card.
-        self.discard_deck.append(self.card_deck.pop())
+        burn_card = self.card_deck.pop()
+        self.discard_deck.append(burn_card)
         print("Top card burned. Ready to deal.\n")
         return self.card_deck
 
@@ -82,7 +84,6 @@ class Player:
 
 def play_again(player, deck, dealer=Dealer()):
     choice = pyip.inputYesNo(prompt="Would you like to play another hand? Y/N\n")
-    #choice = input("Would you like to play another hand? Y/N\n")[0].lower()
     if choice == "yes":
         play_blackjack(player, deck)
     else:
@@ -91,6 +92,8 @@ def play_again(player, deck, dealer=Dealer()):
 def cleanup(player, deck, dealer=Dealer()):
     player.is_busted = False
     dealer.is_busted = False
+    dealer.ask_insurance = False
+    player.insurance = False
     print("Clearing the layout...\n")
     deck.discard_deck.extend(player.player_hand)
     deck.discard_deck.extend(dealer.dealer_hand)
@@ -129,21 +132,20 @@ def cleanup(player, deck, dealer=Dealer()):
 
 def play_blackjack(player, deck, dealer=Dealer()):
     system('clear')
+
+    print(len(deck.card_deck))
+
     if len(deck.discard_deck) >= (len(deck.card_deck) * .6) or not deck.discard_deck:
         deck.shuffle()
     
-    wager = pyip.inputNum(prompt=f"You have ${player.bankroll:,}. Table minimum is $50. How much would you like to bet? ", max=player.bankroll, min=50)
+    print(len(deck.card_deck))
+    print(len(deck.discard_deck))
 
-    '''while True:
-        try:
-            wager = float(input(f"You have ${player.bankroll:,}. How much would you like to bet? "))
-            break
-        except:
-            print("Whole numbers only please. ")''' # Old Code
+    wager = pyip.inputNum(prompt=f"You have ${player.bankroll:,}. Table minimum is $50. How much would you like to bet? ", max=player.bankroll, min=50)
  
     # Draws and removes top cards from deck, 2 for player and 2 for dealer
-    player_card1, dealer_card1 = deck.card_deck.pop(), 'A'#deck.card_deck.pop()
-    player_card2, dealer_card2 = deck.card_deck.pop(), '8'#deck.card_deck.pop()
+    player_card1, dealer_card1 = deck.card_deck.pop(), deck.card_deck.pop()
+    player_card2, dealer_card2 = deck.card_deck.pop(), deck.card_deck.pop()
 
     # Appends cards to player's/dealer's hand.
     print("\nBets are placed. Cards are out...\n")
@@ -159,7 +161,7 @@ def play_blackjack(player, deck, dealer=Dealer()):
     print(f"The dealer is showing {dealer_card1}.\n")
 
     # Print 
-    print(f"You have {player.player_hand.total_hand()}.")
+    print(f"You have {player.player_hand.total_hand()}.\n")
 
     # Control flow for dealer Ace Up (insurance)
     if dealer_card1 == 'A':
@@ -229,8 +231,14 @@ def play_blackjack(player, deck, dealer=Dealer()):
                 wager += wager
                 pl_hit_card = deck.card_deck.pop()
                 player.player_hand.append(pl_hit_card)
-                print(f"\nYour double down card is a {pl_hit_card}. You now have {player.player_hand.total_hand()}.\n")
-                break
+                if player.player_hand.total_hand() > 21:
+                    print(f"You get a {pl_hit_card}. You busted.\n")
+                    player.is_busted = True
+                    player.bankroll = player.bankroll - wager
+                    break
+                else:
+                    print(f"\nYour double down card is a {pl_hit_card}. You now have {player.player_hand.total_hand()}.\n")
+                    break
 
             else:
                 print(f"\nPlayer stands with {player.player_hand.total_hand()}.\n")
@@ -267,6 +275,7 @@ def play_blackjack(player, deck, dealer=Dealer()):
     player.is_busted = False # Resets is_busted status
     dealer.is_busted = False
     dealer.ask_insurance = False # Resets dealer ace up trigger
+    player.insurance = False
     print("Clearing the layout...\n")
     deck.discard_deck.extend(player.player_hand) # Adds player/dealer cards to discard
     deck.discard_deck.extend(dealer.dealer_hand)
